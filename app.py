@@ -6,21 +6,19 @@ import seaborn as sns
 
 from sklearn.preprocessing import LabelEncoder, RobustScaler
 from sklearn.decomposition import PCA
-from sklearn.cluster import KMeans, AgglomerativeClustering, DBSCAN
-from sklearn.neighbors import NearestNeighbors
+from sklearn.cluster import AgglomerativeClustering
 from sklearn.metrics import silhouette_score
-import scipy.cluster.hierarchy as sch
 
 st.set_page_config(layout="wide")
-st.title("🌍 World Development Clustering Dashboard")
+st.title("🔗 World Development Clustering with Agglomerative Clustering")
 
-# File upload
+# Upload file
 uploaded_file = st.file_uploader("Upload your Excel file", type=["xlsx"])
 if uploaded_file:
     df = pd.read_excel(uploaded_file)
     st.success("File uploaded successfully!")
 
-    # Initial cleaning
+    # Clean and preprocess
     for col in ['Business Tax Rate', 'GDP', 'Health Exp/Capita', 'Tourism Inbound', 'Tourism Outbound']:
         if col in df.columns:
             df[col] = df[col].astype(str).str.replace(',', '').str.replace('%', '').str.replace('$', '')
@@ -34,7 +32,7 @@ if uploaded_file:
         else:
             df[col] = df[col].fillna(df[col].median())
 
-    # Encoding and scaling
+    # Encode and scale
     le = LabelEncoder()
     df['country_encoded'] = le.fit_transform(df['Country'])
     df_countries = df['Country']
@@ -42,90 +40,39 @@ if uploaded_file:
 
     numerical_columns = df.select_dtypes(['int64', 'float64']).columns
     rs = RobustScaler()
-    df_rs = df.copy()
-    df_rs[numerical_columns] = rs.fit_transform(df[numerical_columns])
+    df_scaled = df.copy()
+    df_scaled[numerical_columns] = rs.fit_transform(df[numerical_columns])
 
-    # PCA
-    pca = PCA(n_components=0.95)
-    pca_data = pca.fit_transform(df_rs)
-    pca_df = pd.DataFrame(pca_data, columns=[f'PC{i+1}' for i in range(pca_data.shape[1])])
-
-    st.subheader("📊 PCA Explained Variance")
-    fig, ax = plt.subplots()
-    ax.plot(np.cumsum(pca.explained_variance_ratio_), marker='o', linestyle='--', color='green')
-    ax.set_title('Cumulative Explained Variance')
-    ax.set_xlabel('Number of Components')
-    ax.set_ylabel('Variance')
-    st.pyplot(fig)
-
-    # Elbow method
-    inertia = []
-    K = range(2, 10)
-    for k in K:
-        kmeans = KMeans(n_clusters=k, random_state=42)
-        kmeans.fit(pca_df)
-        inertia.append(kmeans.inertia_)
-
-    st.subheader("📐 Elbow Curve for KMeans")
-    fig, ax = plt.subplots()
-    ax.plot(K, inertia, marker='o')
-    ax.set_title("Elbow Curve")
-    ax.set_xlabel("K")
-    ax.set_ylabel("Inertia")
-    st.pyplot(fig)
-
-    # KMeans Clustering
-    kmeans = KMeans(n_clusters=3, random_state=42)
-    kmeans_labels = kmeans.fit_predict(df_rs)
-
-    st.subheader("📌 KMeans Clustering (K=3)")
-    fig, ax = plt.subplots()
-    ax.scatter(pca_df.iloc[:, 0], pca_df.iloc[:, 1], c=kmeans_labels, cmap='viridis', s=50)
-    ax.set_title("KMeans Clusters")
-    st.pyplot(fig)
+    # PCA for visualization
+    pca = PCA(n_components=2)
+    pca_data = pca.fit_transform(df_scaled)
+    pca_df = pd.DataFrame(pca_data, columns=['PC1', 'PC2'])
 
     # Agglomerative Clustering
     agglo = AgglomerativeClustering(n_clusters=3, linkage='ward')
-    agglo_labels = agglo.fit_predict(df_rs)
+    agglo_labels = agglo.fit_predict(df_scaled)
 
-    st.subheader("🔗 Agglomerative Clustering")
+    # Silhouette Score
+    score = silhouette_score(df_scaled, agglo_labels)
+
+    # Add cluster labels to data
+    df_result = df.copy()
+    df_result['Country'] = df_countries
+    df_result['Cluster'] = agglo_labels
+    pca_df['Cluster'] = agglo_labels
+    pca_df['Country'] = df_countries
+
+    st.subheader("📌 Agglomerative Clustering Visualization")
     fig, ax = plt.subplots()
-    ax.scatter(pca_df.iloc[:, 0], pca_df.iloc[:, 1], c=agglo_labels, cmap='rainbow', s=50)
-    ax.set_title("Agglomerative Clusters")
+    sns.scatterplot(data=pca_df, x='PC1', y='PC2', hue='Cluster', palette='Set2', s=60, ax=ax)
+    ax.set_title(f"Agglomerative Clusters (Silhouette Score = {score:.2f})")
     st.pyplot(fig)
 
-    # Dendrogram
-    st.subheader("🌲 Dendrogram")
-    fig, ax = plt.subplots(figsize=(10, 6))
-    sch.dendrogram(sch.linkage(pca_df, method='ward'), ax=ax)
-    ax.axhline(y=4000, color='r', linestyle='--')
-    st.pyplot(fig)
+    st.subheader("📋 Clustered Country Table")
+    st.dataframe(df_result[['Country', 'Cluster']].sort_values('Cluster'))
 
-    # DBSCAN
-    best_score = -1
-    best_eps = None
-    for eps in [20.0, 25.0, 30.0, 40.0]:
-        dbscan = DBSCAN(eps=eps, min_samples=10)
-        labels = dbscan.fit_predict(df_rs)
-        if len(set(labels)) > 1:
-            score = silhouette_score(df_rs, labels)
-            if score > best_score:
-                best_score = score
-                best_eps = eps
+    st.subheader("📊 Cluster Profiles (Feature Means)")
+    cluster_profiles = df_result.groupby('Cluster')[numerical_columns].mean().round(2)
+    st.dataframe(cluster_profiles)
 
-    dbscan = DBSCAN(eps=best_eps, min_samples=10)
-    db_labels = dbscan.fit_predict(df_rs)
-
-    st.subheader("🌀 DBSCAN Clustering")
-    fig, ax = plt.subplots()
-    ax.scatter(pca_df.iloc[:, 0], pca_df.iloc[:, 1], c=db_labels, cmap='rainbow', s=50)
-    ax.set_title("DBSCAN Clusters")
-    st.pyplot(fig)
-
-    # Silhouette Scores
-    st.subheader("📈 Silhouette Scores")
-    kmeans_score = silhouette_score(df_rs, kmeans_labels)
-    agglo_score = silhouette_score(df_rs, agglo_labels)
-    st.write(f"**KMeans Score:** {kmeans_score:.3f}")
-    st.write(f"**Agglomerative Score:** {agglo_score:.3f}")
-    st.write(f"**DBSCAN Score:** {best_score:.3f} (eps={best_eps})")
+    st.success("✅ Clustering complete using Agglomerative Clustering!")

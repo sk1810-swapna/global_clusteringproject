@@ -66,17 +66,29 @@ if uploaded_file:
     pca_df['Cluster'] = agglo_labels
     pca_df['Country'] = df_countries
 
-    st.subheader(f"📌 Agglomerative Clustering Visualization (n={n_clusters})")
+    # Clustered Country Table
+    st.subheader("📋 Clustered Country Table")
+    st.dataframe(df_result[['Country', 'Cluster']].sort_values('Cluster'))
+
+    # Cluster Summary
+    st.subheader("📍 Cluster Summary")
+    cluster_counts = df_result['Cluster'].value_counts().sort_index()
+    summary_df = pd.DataFrame({
+        'Cluster': cluster_counts.index,
+        'Number of Countries': cluster_counts.values
+    })
+    st.dataframe(summary_df)
+
+    # Cluster Profiles
+    st.subheader("📊 Cluster Profiles (Feature Means)")
+    cluster_profiles = df_result.groupby('Cluster')[numerical_columns].mean().round(2)
+    st.dataframe(cluster_profiles)
+
+    # PCA Cluster Visualization
+    st.subheader(f"📌 PCA Cluster Visualization (n={n_clusters})")
     fig, ax = plt.subplots()
     sns.scatterplot(data=pca_df, x='PC1', y='PC2', hue='Cluster', palette='Set2', s=60, ax=ax)
     ax.set_title(f"Agglomerative Clusters (Silhouette Score = {score:.2f})")
     st.pyplot(fig)
-
-    st.subheader("📋 Clustered Country Table")
-    st.dataframe(df_result[['Country', 'Cluster']].sort_values('Cluster'))
-
-    st.subheader("📊 Cluster Profiles (Feature Means)")
-    cluster_profiles = df_result.groupby('Cluster')[numerical_columns].mean().round(2)
-    st.dataframe(cluster_profiles)
 
     st.success("✅ Clustering complete using Agglomerative Clustering!")

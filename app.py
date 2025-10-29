@@ -10,17 +10,17 @@ from sklearn.cluster import AgglomerativeClustering
 from sklearn.metrics import silhouette_score
 
 st.set_page_config(layout="wide")
-st.title("🧠 Agglomerative Clustering on World Development Data")
+st.title("🔗 Agglomerative Clustering on World Development Data")
 
 # Sidebar for cluster selection
-st.sidebar.header("⚙️ Clustering Settings")
-n_clusters = st.sidebar.slider("🔢 Select number of clusters", min_value=2, max_value=10, value=3)
+st.sidebar.header("🔧 Clustering Settings")
+n_clusters = st.sidebar.slider("Select number of clusters", min_value=2, max_value=10, value=3)
 
 # Upload file
-uploaded_file = st.file_uploader("📂 Upload your Excel file", type=["xlsx"])
+uploaded_file = st.file_uploader("Upload your Excel file", type=["xlsx"])
 if uploaded_file:
     df = pd.read_excel(uploaded_file)
-    st.success("✅ File uploaded successfully!")
+    st.success("File uploaded successfully!")
 
     # Clean and preprocess
     for col in ['Business Tax Rate', 'GDP', 'Health Exp/Capita', 'Tourism Inbound', 'Tourism Outbound']:
@@ -71,7 +71,7 @@ if uploaded_file:
     st.dataframe(df_result[['Country', 'Cluster']].sort_values('Cluster'))
 
     # Cluster Summary
-    st.subheader("📊 Cluster Summary")
+    st.subheader("📍 Cluster Summary")
     cluster_counts = df_result['Cluster'].value_counts().sort_index()
     summary_df = pd.DataFrame({
         'Cluster': cluster_counts.index,
@@ -80,19 +80,15 @@ if uploaded_file:
     st.dataframe(summary_df)
 
     # Cluster Profiles
-    st.subheader("📈 Cluster Profiles (Feature Means)")
-    st.markdown("""
-    Each cluster profile shows the average values of key development indicators for countries in that group.
-    This helps us understand what makes each cluster unique — for example, one cluster might have high GDP and long life expectancy, while another might show lower health spending and higher infant mortality.
-    """)
+    st.subheader("📊 Cluster Profiles (Feature Means)")
     cluster_profiles = df_result.groupby('Cluster')[numerical_columns].mean().round(2)
     st.dataframe(cluster_profiles)
 
     # PCA Cluster Visualization
-    st.subheader(f"🗺️ PCA Cluster Visualization (n={n_clusters})")
+    st.subheader(f"📌 PCA Cluster Visualization (n={n_clusters})")
     fig, ax = plt.subplots()
     sns.scatterplot(data=pca_df, x='PC1', y='PC2', hue='Cluster', palette='Set2', s=60, ax=ax)
     ax.set_title(f"Agglomerative Clusters (Silhouette Score = {score:.2f})")
     st.pyplot(fig)
 
-    st.success("🎉 Clustering complete using Agglomerative Clustering!")
+    st.success("✅ Clustering complete using Agglomerative Clustering!")

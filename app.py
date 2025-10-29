@@ -84,11 +84,7 @@ if uploaded_file:
     st.dataframe(summary_df)
 
     # Cluster Profiles (Feature Means)
-    st.subheader("📈 Cluster Profiles (Feature Means)")
-    st.markdown("""
-    Each cluster profile shows the average values of key development indicators for countries in that group.
-    This helps us understand what makes each cluster unique — for example, one cluster might have high GDP and long life expectancy, while another might show lower health spending and higher infant mortality.
-    """)
+    st.subheader("📈 Cluster Profiles")
     cluster_profiles = df_result.groupby('Cluster')[numerical_columns].mean().round(2)
     st.dataframe(cluster_profiles)
 
@@ -110,16 +106,6 @@ if uploaded_file:
         )
     st.dataframe(labeled_profiles)
 
-    # Cluster Descriptions
-    st.subheader("🧠 Cluster Insights")
-    if n_clusters >= 2:
-        st.markdown("""
-        - **Cluster 1**: Countries in this group tend to have **high GDP**, **better health spending**, and **higher life expectancy**. These are likely more economically developed nations.
-        - **Cluster 2**: This group shows **moderate development**, with balanced indicators across economy, health, and technology. These countries may be in transition or emerging markets.
-        """)
-    else:
-        st.markdown("Only one cluster selected — no comparison available.")
-
     # PCA Cluster Visualization
     st.subheader(f"🗺️ PCA Cluster Visualization (n={n_clusters})")
     fig, ax = plt.subplots()
@@ -127,4 +113,3 @@ if uploaded_file:
     ax.set_title(f"Agglomerative Clusters (Silhouette Score = {score:.2f})")
     st.pyplot(fig)
 
-    st.success("🎉 Clustering complete using Agglomerative Clustering!")

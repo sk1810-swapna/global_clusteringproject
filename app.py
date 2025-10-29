@@ -10,7 +10,11 @@ from sklearn.cluster import AgglomerativeClustering
 from sklearn.metrics import silhouette_score
 
 st.set_page_config(layout="wide")
-st.title("🔗 World Development Clustering with Agglomerative Clustering")
+st.title("🔗 Agglomerative Clustering on World Development Data")
+
+# Sidebar for cluster selection
+st.sidebar.header("🔧 Clustering Settings")
+n_clusters = st.sidebar.slider("Select number of clusters", min_value=2, max_value=10, value=3)
 
 # Upload file
 uploaded_file = st.file_uploader("Upload your Excel file", type=["xlsx"])
@@ -49,7 +53,7 @@ if uploaded_file:
     pca_df = pd.DataFrame(pca_data, columns=['PC1', 'PC2'])
 
     # Agglomerative Clustering
-    agglo = AgglomerativeClustering(n_clusters=3, linkage='ward')
+    agglo = AgglomerativeClustering(n_clusters=n_clusters, linkage='ward')
     agglo_labels = agglo.fit_predict(df_scaled)
 
     # Silhouette Score
@@ -62,7 +66,7 @@ if uploaded_file:
     pca_df['Cluster'] = agglo_labels
     pca_df['Country'] = df_countries
 
-    st.subheader("📌 Agglomerative Clustering Visualization")
+    st.subheader(f"📌 Agglomerative Clustering Visualization (n={n_clusters})")
     fig, ax = plt.subplots()
     sns.scatterplot(data=pca_df, x='PC1', y='PC2', hue='Cluster', palette='Set2', s=60, ax=ax)
     ax.set_title(f"Agglomerative Clusters (Silhouette Score = {score:.2f})")
